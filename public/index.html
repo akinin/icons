@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AHS Icons</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>AHS Icons</h1>
+      <p id="summary">Загрузка...</p>
+    </div>
+    <button id="add-button" class="primary">Добавить</button>
+  </header>
+
+  <main>
+    <section id="dropzone" class="dropzone">
+      <div>
+        <strong>Перетащите SVG, PNG или ICO сюда</strong>
+        <span>Можно загрузить несколько файлов одной иконки сразу.</span>
+      </div>
+      <button id="pick-files" type="button">Выбрать файлы</button>
+      <input id="file-input" type="file" accept=".svg,.png,.ico,image/svg+xml,image/png,image/x-icon" multiple hidden>
+    </section>
+
+    <section class="toolbar">
+      <input id="search" type="search" placeholder="Поиск по названию">
+      <select id="format-filter">
+        <option value="">Все форматы</option>
+        <option value="svg">SVG</option>
+        <option value="png">PNG</option>
+        <option value="ico">ICO</option>
+      </select>
+    </section>
+
+    <section id="grid" class="grid" aria-live="polite"></section>
+  </main>
+
+  <dialog id="editor">
+    <form id="editor-form" method="dialog">
+      <header class="dialog-header">
+        <h2 id="dialog-title">Иконка</h2>
+        <button class="icon-button" value="cancel" type="button" id="close-dialog" aria-label="Закрыть">×</button>
+      </header>
+
+      <label>
+        Название
+        <input id="icon-name" name="name" type="text" required autocomplete="off">
+      </label>
+
+      <label>
+        Файлы
+        <input id="icon-files" name="files" type="file" accept=".svg,.png,.ico,image/svg+xml,image/png,image/x-icon" multiple>
+      </label>
+
+      <div id="current-formats" class="format-row"></div>
+
+      <footer class="dialog-actions">
+        <button id="delete-icon" class="danger" type="button">Удалить</button>
+        <span></span>
+        <button type="button" id="cancel-edit">Отмена</button>
+        <button class="primary" type="submit">Сохранить</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
