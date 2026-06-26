@@ -58,9 +58,6 @@ button:active {
   display: inline-grid;
   justify-items: start;
   gap: 8px;
-  border: 0;
-  background: transparent;
-  padding: 0;
   text-align: left;
 }
 
@@ -77,6 +74,27 @@ button:active {
   width: 54px;
   height: 54px;
   object-fit: contain;
+}
+
+.brand-logo-slot {
+  display: inline-grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border: 2px dashed #333;
+  border-radius: 8px;
+  background: #1a1a1a;
+}
+
+.brand-logo-slot:hover {
+  border-color: #0f60d9;
+  background: #242424;
+}
+
+#brand-logo-empty {
+  color: #777;
+  font-size: 26px;
+  line-height: 1;
 }
 
 #summary {

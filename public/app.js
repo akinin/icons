@@ -11,7 +11,6 @@ const els = {
   brandPicker: document.querySelector('#brand-picker'),
   cancelEdit: document.querySelector('#cancel-edit'),
   closeDialog: document.querySelector('#close-dialog'),
-  closeLogoDialog: document.querySelector('#close-logo-dialog'),
   closePreview: document.querySelector('#close-preview'),
   currentFormats: document.querySelector('#current-formats'),
   deleteIcon: document.querySelector('#delete-icon'),
@@ -25,8 +24,7 @@ const els = {
   grid: document.querySelector('#grid'),
   iconFiles: document.querySelector('#icon-files'),
   iconName: document.querySelector('#icon-name'),
-  logoDialog: document.querySelector('#logo-dialog'),
-  logoOptions: document.querySelector('#logo-options'),
+  logoFileInput: document.querySelector('#logo-file-input'),
   pickEditFiles: document.querySelector('#pick-edit-files'),
   pickFiles: document.querySelector('#pick-files'),
   previewDialog: document.querySelector('#preview-dialog'),
@@ -118,8 +116,10 @@ function renderBrandLogo() {
   if (icon && icon.formats[format]) {
     els.brandLogo.src = iconUrl(icon, format);
     els.brandLogo.hidden = false;
+    document.querySelector('#brand-logo-empty').hidden = true;
   } else {
     els.brandLogo.hidden = true;
+    document.querySelector('#brand-logo-empty').hidden = false;
   }
 }
 
@@ -232,37 +232,46 @@ async function copyIconLink(icon, format) {
   const url = new URL(iconUrl(icon, format), window.location.href);
   url.search = '';
   try {
-    await navigator.clipboard.writeText(url.href);
-    showToast(`Ссылка ${format.toUpperCase()} скопирована`);
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(url.href);
+    } else {
+      const textarea = document.createElement('textarea');
+      textarea.value = url.href;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      textarea.remove();
+    }
+    showToast('Скопировано');
   } catch {
-    showToast(url.href);
+    showToast('Не удалось скопировать');
   }
 }
 
-function openLogoDialog() {
-  els.logoOptions.innerHTML = '';
-  for (const icon of state.icons) {
-    for (const format of iconFormats(icon)) {
-      const option = document.createElement('button');
-      option.type = 'button';
-      option.className = 'logo-option';
-      option.innerHTML = `<img src="${iconUrl(icon, format)}" alt=""><span>${icon.name}</span><small>${format.toUpperCase()}</small>`;
-      option.addEventListener('click', async () => {
-        state.previewing = icon;
-        state.previewFormat = format;
-        await setLogo();
-        els.logoDialog.close();
-        state.previewing = null;
-        state.previewFormat = null;
-      });
-      els.logoOptions.appendChild(option);
-    }
+async function uploadLogo(file) {
+  const accepted = validFiles([file]);
+  if (!accepted.length) {
+    showToast('Поддерживаются только SVG, PNG и ICO');
+    return;
   }
 
-  if (!state.icons.length) {
-    els.logoOptions.textContent = 'Сначала загрузите иконку';
+  const form = new FormData();
+  form.append('name', 'AHS Logo');
+  form.append('files', file);
+
+  try {
+    const data = await requestJson('/api/icons', { method: 'POST', body: form });
+    state.previewing = data.icon;
+    state.previewFormat = iconFormats(data.icon)[0];
+    await setLogo();
+    state.previewing = null;
+    state.previewFormat = null;
+    await loadIcons();
+  } catch (error) {
+    showToast(error.message);
   }
-  els.logoDialog.showModal();
 }
 
 function openEditor(icon = null, files = []) {
@@ -398,15 +407,19 @@ async function handleFiles(files) {
   }
 }
 
-els.brandPicker.addEventListener('click', openLogoDialog);
+els.brandPicker.addEventListener('click', () => els.logoFileInput.click());
 els.cancelEdit.addEventListener('click', closeEditor);
 els.closeDialog.addEventListener('click', closeEditor);
-els.closeLogoDialog.addEventListener('click', () => els.logoDialog.close());
 els.closePreview.addEventListener('click', closePreview);
 els.deleteIcon.addEventListener('click', deleteCurrentIcon);
 els.form.addEventListener('submit', submitEditor);
 els.formatFilter.addEventListener('change', render);
 els.iconFiles.addEventListener('change', updateEditFileSummary);
+els.logoFileInput.addEventListener('change', () => {
+  const file = els.logoFileInput.files[0];
+  if (file) uploadLogo(file);
+  els.logoFileInput.value = '';
+});
 els.pickEditFiles.addEventListener('click', () => els.iconFiles.click());
 els.pickFiles.addEventListener('click', () => els.fileInput.click());
 els.fileInput.addEventListener('change', () => handleFiles(Array.from(els.fileInput.files)));

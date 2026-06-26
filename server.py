@@ -43,6 +43,7 @@ class IconStore:
             self.write([])
         if not self.settings_path.exists():
             self.write_settings({})
+        self.compact_duplicates()
 
     def read(self):
         with self.db_path.open("r", encoding="utf-8") as handle:
@@ -76,6 +77,36 @@ class IconStore:
 
     def list_icons(self):
         return sorted(self.read(), key=lambda item: item["name"].lower())
+
+    def compact_duplicates(self):
+        icons = self.read()
+        by_slug = {}
+        changed = False
+
+        for icon in icons:
+            slug = icon.get("slug") or slugify(icon.get("name", "icon"))
+            if slug not in by_slug:
+                icon["slug"] = slug
+                by_slug[slug] = icon
+                continue
+
+            target = by_slug[slug]
+            source_dir = self.icons_dir / icon["id"]
+            target_dir = self.icons_dir / target["id"]
+            target_dir.mkdir(parents=True, exist_ok=True)
+
+            for ext, meta in icon.get("formats", {}).items():
+                if ext not in target.get("formats", {}):
+                    src = source_dir / meta["filename"]
+                    dest = target_dir / meta["filename"]
+                    if src.exists():
+                        shutil.move(src, dest)
+                    target.setdefault("formats", {})[ext] = meta
+            shutil.rmtree(source_dir, ignore_errors=True)
+            changed = True
+
+        if changed:
+            self.write(list(by_slug.values()))
 
     def get(self, icon_id):
         for icon in self.read():
