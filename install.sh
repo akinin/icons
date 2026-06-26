@@ -75,7 +75,8 @@ WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-systemctl enable --now ahs-icons.service
+systemctl enable ahs-icons.service
+systemctl restart ahs-icons.service
 
 echo "AHS Icons installed."
 echo "App dir: $APP_DIR"
