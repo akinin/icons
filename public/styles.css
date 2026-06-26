@@ -48,14 +48,20 @@ button:active {
 }
 
 .hero {
-  padding: 8px 0 24px;
-  text-align: center;
+  display: flex;
+  justify-content: flex-start;
+  padding: 6px 0 24px;
+  text-align: left;
 }
 
 .brand {
-  display: grid;
-  justify-items: center;
+  display: inline-grid;
+  justify-items: start;
   gap: 8px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
 }
 
 .brand h1 {
@@ -160,6 +166,7 @@ dialog input[type="text"]:focus {
 }
 
 .icon-card {
+  position: relative;
   display: grid;
   grid-template-rows: 78px minmax(34px, auto) auto;
   gap: 12px;
@@ -201,10 +208,8 @@ dialog input[type="text"]:focus {
 }
 
 .card-footer {
-  display: grid;
-  grid-template-columns: 1fr 32px;
-  gap: 8px;
-  align-items: center;
+  display: flex;
+  justify-content: center;
 }
 
 .format-buttons,
@@ -228,12 +233,22 @@ dialog input[type="text"]:focus {
 }
 
 .edit-button {
-  width: 32px;
-  height: 32px;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
   padding: 0;
-  border-radius: 50%;
-  font-size: 18px;
+  border: 0;
+  background: transparent;
+  color: #999;
+  font-size: 20px;
   line-height: 1;
+}
+
+.edit-button:hover {
+  background: transparent;
+  color: #f5f5f5;
 }
 
 .no-results {
@@ -248,6 +263,7 @@ dialog {
   width: min(520px, calc(100vw - 28px));
   border: none;
   border-radius: 12px;
+  margin: auto;
   padding: 0;
   background: #1a1a1a;
   color: #f5f5f5;
@@ -371,6 +387,42 @@ dialog input[type="text"] {
   color: #999;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.logo-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  max-height: 52vh;
+  overflow: auto;
+}
+
+.logo-option {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 14px 10px;
+  min-height: 124px;
+}
+
+.logo-option img {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+}
+
+.logo-option span {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logo-option small {
+  color: #999;
+  font-weight: 700;
 }
 
 .dialog-actions {

@@ -8,10 +8,10 @@
 </head>
 <body>
   <header class="hero">
-    <div class="brand">
+    <button id="brand-picker" class="brand" type="button" title="Выбрать логотип">
       <h1><img id="brand-logo" class="brand-logo" alt="" hidden>AHS Icons</h1>
       <p id="summary">Загрузка...</p>
-    </div>
+    </button>
   </header>
 
   <main class="container">
@@ -46,8 +46,15 @@
       </div>
       <div class="modal-actions">
         <div id="preview-formats" class="modal-format-buttons"></div>
-        <button id="use-as-logo" type="button">Поставить перед AHS Icons</button>
       </div>
+    </div>
+  </dialog>
+
+  <dialog id="logo-dialog">
+    <div class="preview-dialog">
+      <button class="modal-close" type="button" id="close-logo-dialog" aria-label="Закрыть">×</button>
+      <h2>Логотип AHS Icons</h2>
+      <div id="logo-options" class="logo-options"></div>
     </div>
   </dialog>
 

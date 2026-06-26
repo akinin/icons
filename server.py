@@ -95,15 +95,21 @@ class IconStore:
             icon["slug"] = slugify(name)
             icon["updatedAt"] = now
         else:
-            icon = {
-                "id": uuid.uuid4().hex,
-                "name": name,
-                "slug": slugify(name),
-                "formats": {},
-                "createdAt": now,
-                "updatedAt": now,
-            }
-            icons.append(icon)
+            slug = slugify(name)
+            icon = next((item for item in icons if item.get("slug") == slug), None)
+            if icon:
+                icon["name"] = name
+                icon["updatedAt"] = now
+            else:
+                icon = {
+                    "id": uuid.uuid4().hex,
+                    "name": name,
+                    "slug": slug,
+                    "formats": {},
+                    "createdAt": now,
+                    "updatedAt": now,
+                }
+                icons.append(icon)
 
         target_dir = self.icons_dir / icon["id"]
         target_dir.mkdir(parents=True, exist_ok=True)

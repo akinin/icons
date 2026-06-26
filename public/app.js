@@ -8,8 +8,10 @@ const state = {
 
 const els = {
   brandLogo: document.querySelector('#brand-logo'),
+  brandPicker: document.querySelector('#brand-picker'),
   cancelEdit: document.querySelector('#cancel-edit'),
   closeDialog: document.querySelector('#close-dialog'),
+  closeLogoDialog: document.querySelector('#close-logo-dialog'),
   closePreview: document.querySelector('#close-preview'),
   currentFormats: document.querySelector('#current-formats'),
   deleteIcon: document.querySelector('#delete-icon'),
@@ -23,6 +25,8 @@ const els = {
   grid: document.querySelector('#grid'),
   iconFiles: document.querySelector('#icon-files'),
   iconName: document.querySelector('#icon-name'),
+  logoDialog: document.querySelector('#logo-dialog'),
+  logoOptions: document.querySelector('#logo-options'),
   pickEditFiles: document.querySelector('#pick-edit-files'),
   pickFiles: document.querySelector('#pick-files'),
   previewDialog: document.querySelector('#preview-dialog'),
@@ -32,7 +36,6 @@ const els = {
   search: document.querySelector('#search'),
   summary: document.querySelector('#summary'),
   toast: document.querySelector('#toast'),
-  useAsLogo: document.querySelector('#use-as-logo'),
 };
 
 const formatOrder = ['svg', 'png', 'ico'];
@@ -129,6 +132,18 @@ function renderCard(icon) {
     if (event.key === 'Enter') openPreview(icon);
   });
 
+  const edit = document.createElement('button');
+  edit.type = 'button';
+  edit.className = 'edit-button';
+  edit.textContent = '✐';
+  edit.title = 'Редактировать';
+  edit.setAttribute('aria-label', `Редактировать ${icon.name}`);
+  edit.addEventListener('click', (event) => {
+    event.stopPropagation();
+    openEditor(icon);
+  });
+  card.appendChild(edit);
+
   const format = previewFormat(icon);
   if (format) {
     const img = document.createElement('img');
@@ -153,18 +168,7 @@ function renderCard(icon) {
     formats.appendChild(pill);
   }
 
-  const edit = document.createElement('button');
-  edit.type = 'button';
-  edit.className = 'edit-button';
-  edit.textContent = '✎';
-  edit.title = 'Редактировать';
-  edit.setAttribute('aria-label', `Редактировать ${icon.name}`);
-  edit.addEventListener('click', (event) => {
-    event.stopPropagation();
-    openEditor(icon);
-  });
-
-  footer.append(formats, edit);
+  footer.append(formats);
   card.append(title, footer);
   return card;
 }
@@ -193,8 +197,7 @@ function renderPreview() {
       button.classList.add('active');
     }
     button.addEventListener('click', () => {
-      state.previewFormat = format;
-      renderPreview();
+      copyIconLink(icon, format);
     });
     els.previewFormats.appendChild(button);
   }
@@ -223,6 +226,43 @@ async function setLogo() {
   } catch (error) {
     showToast(error.message);
   }
+}
+
+async function copyIconLink(icon, format) {
+  const url = new URL(iconUrl(icon, format), window.location.href);
+  url.search = '';
+  try {
+    await navigator.clipboard.writeText(url.href);
+    showToast(`Ссылка ${format.toUpperCase()} скопирована`);
+  } catch {
+    showToast(url.href);
+  }
+}
+
+function openLogoDialog() {
+  els.logoOptions.innerHTML = '';
+  for (const icon of state.icons) {
+    for (const format of iconFormats(icon)) {
+      const option = document.createElement('button');
+      option.type = 'button';
+      option.className = 'logo-option';
+      option.innerHTML = `<img src="${iconUrl(icon, format)}" alt=""><span>${icon.name}</span><small>${format.toUpperCase()}</small>`;
+      option.addEventListener('click', async () => {
+        state.previewing = icon;
+        state.previewFormat = format;
+        await setLogo();
+        els.logoDialog.close();
+        state.previewing = null;
+        state.previewFormat = null;
+      });
+      els.logoOptions.appendChild(option);
+    }
+  }
+
+  if (!state.icons.length) {
+    els.logoOptions.textContent = 'Сначала загрузите иконку';
+  }
+  els.logoDialog.showModal();
 }
 
 function openEditor(icon = null, files = []) {
@@ -358,8 +398,10 @@ async function handleFiles(files) {
   }
 }
 
+els.brandPicker.addEventListener('click', openLogoDialog);
 els.cancelEdit.addEventListener('click', closeEditor);
 els.closeDialog.addEventListener('click', closeEditor);
+els.closeLogoDialog.addEventListener('click', () => els.logoDialog.close());
 els.closePreview.addEventListener('click', closePreview);
 els.deleteIcon.addEventListener('click', deleteCurrentIcon);
 els.form.addEventListener('submit', submitEditor);
@@ -369,7 +411,6 @@ els.pickEditFiles.addEventListener('click', () => els.iconFiles.click());
 els.pickFiles.addEventListener('click', () => els.fileInput.click());
 els.fileInput.addEventListener('change', () => handleFiles(Array.from(els.fileInput.files)));
 els.search.addEventListener('input', render);
-els.useAsLogo.addEventListener('click', setLogo);
 
 els.previewDialog.addEventListener('click', (event) => {
   if (event.target === els.previewDialog) closePreview();
