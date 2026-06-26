@@ -36,10 +36,13 @@ class IconStore:
         self.data_dir = Path(data_dir)
         self.icons_dir = self.data_dir / "icons"
         self.db_path = self.data_dir / "icons.json"
+        self.settings_path = self.data_dir / "settings.json"
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.icons_dir.mkdir(parents=True, exist_ok=True)
         if not self.db_path.exists():
             self.write([])
+        if not self.settings_path.exists():
+            self.write_settings({})
 
     def read(self):
         with self.db_path.open("r", encoding="utf-8") as handle:
@@ -51,6 +54,25 @@ class IconStore:
             json.dump(icons, handle, ensure_ascii=False, indent=2)
             handle.write("\n")
         temp.replace(self.db_path)
+
+    def read_settings(self):
+        with self.settings_path.open("r", encoding="utf-8") as handle:
+            settings = json.load(handle)
+        return {
+            "logoIconId": settings.get("logoIconId"),
+            "logoFormat": settings.get("logoFormat"),
+        }
+
+    def write_settings(self, settings):
+        temp = self.settings_path.with_suffix(".json.tmp")
+        payload = {
+            "logoIconId": settings.get("logoIconId"),
+            "logoFormat": settings.get("logoFormat"),
+        }
+        with temp.open("w", encoding="utf-8") as handle:
+            json.dump(payload, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+        temp.replace(self.settings_path)
 
     def list_icons(self):
         return sorted(self.read(), key=lambda item: item["name"].lower())
@@ -114,6 +136,24 @@ class IconStore:
             raise KeyError(icon_id)
         shutil.rmtree(self.icons_dir / icon_id, ignore_errors=True)
         self.write(next_icons)
+        settings = self.read_settings()
+        if settings.get("logoIconId") == icon_id:
+            self.write_settings({})
+
+    def save_settings(self, settings):
+        logo_icon_id = settings.get("logoIconId")
+        logo_format = settings.get("logoFormat")
+
+        if not logo_icon_id:
+            self.write_settings({})
+            return self.read_settings()
+
+        icon = self.get(logo_icon_id)
+        if not icon or logo_format not in icon.get("formats", {}):
+            raise ValueError("Logo icon or format not found")
+
+        self.write_settings({"logoIconId": logo_icon_id, "logoFormat": logo_format})
+        return self.read_settings()
 
 
 class AhsIconsHandler(BaseHTTPRequestHandler):
@@ -136,7 +176,10 @@ class AhsIconsHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         if parsed.path == "/api/icons":
-            self.send_json({"icons": self.store.list_icons()})
+            self.send_json({"icons": self.store.list_icons(), "settings": self.store.read_settings()})
+            return
+        if parsed.path == "/api/settings":
+            self.send_json({"settings": self.store.read_settings()})
             return
         if parsed.path.startswith("/icons/"):
             self.serve_icon(parsed.path)
@@ -150,7 +193,12 @@ class AhsIconsHandler(BaseHTTPRequestHandler):
         self.handle_upsert()
 
     def do_PUT(self):
-        match = re.fullmatch(r"/api/icons/([a-f0-9]{32})", urlparse(self.path).path)
+        parsed_path = urlparse(self.path).path
+        if parsed_path == "/api/settings":
+            self.handle_settings()
+            return
+
+        match = re.fullmatch(r"/api/icons/([a-f0-9]{32})", parsed_path)
         if not match:
             self.send_error_json(HTTPStatus.NOT_FOUND, "Not found")
             return
@@ -186,6 +234,18 @@ class AhsIconsHandler(BaseHTTPRequestHandler):
                 temp_path = Path(upload["path"])
                 if temp_path.exists():
                     temp_path.unlink()
+
+    def handle_settings(self):
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            body = self.rfile.read(length)
+            settings = json.loads(body.decode("utf-8") or "{}")
+            saved = self.store.save_settings(settings)
+            self.send_json({"settings": saved})
+        except ValueError as err:
+            self.send_error_json(HTTPStatus.BAD_REQUEST, str(err))
+        except json.JSONDecodeError:
+            self.send_error_json(HTTPStatus.BAD_REQUEST, "Invalid JSON")
 
     def parse_multipart(self):
         content_type = self.headers.get("Content-Type", "")

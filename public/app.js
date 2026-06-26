@@ -1,27 +1,38 @@
 const state = {
   icons: [],
+  settings: {},
   editing: null,
+  previewing: null,
+  previewFormat: null,
 };
 
 const els = {
-  addButton: document.querySelector('#add-button'),
+  brandLogo: document.querySelector('#brand-logo'),
   cancelEdit: document.querySelector('#cancel-edit'),
   closeDialog: document.querySelector('#close-dialog'),
+  closePreview: document.querySelector('#close-preview'),
   currentFormats: document.querySelector('#current-formats'),
   deleteIcon: document.querySelector('#delete-icon'),
   dialog: document.querySelector('#editor'),
   dialogTitle: document.querySelector('#dialog-title'),
   dropzone: document.querySelector('#dropzone'),
+  editFileSummary: document.querySelector('#edit-file-summary'),
   fileInput: document.querySelector('#file-input'),
   formatFilter: document.querySelector('#format-filter'),
   form: document.querySelector('#editor-form'),
   grid: document.querySelector('#grid'),
   iconFiles: document.querySelector('#icon-files'),
   iconName: document.querySelector('#icon-name'),
+  pickEditFiles: document.querySelector('#pick-edit-files'),
   pickFiles: document.querySelector('#pick-files'),
+  previewDialog: document.querySelector('#preview-dialog'),
+  previewFormats: document.querySelector('#preview-formats'),
+  previewImage: document.querySelector('#preview-image'),
+  previewTitle: document.querySelector('#preview-title'),
   search: document.querySelector('#search'),
   summary: document.querySelector('#summary'),
   toast: document.querySelector('#toast'),
+  useAsLogo: document.querySelector('#use-as-logo'),
 };
 
 const formatOrder = ['svg', 'png', 'ico'];
@@ -39,8 +50,12 @@ function previewFormat(icon) {
   return iconFormats(icon)[0];
 }
 
+function baseName(file) {
+  return file.name.replace(/\.[^.]+$/, '');
+}
+
 function humanNameFromFile(file) {
-  return file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim();
+  return baseName(file).replace(/[-_]+/g, ' ').trim();
 }
 
 function showToast(message) {
@@ -64,6 +79,7 @@ async function requestJson(url, options) {
 async function loadIcons() {
   const data = await requestJson('/api/icons');
   state.icons = data.icons;
+  state.settings = data.settings || {};
   render();
 }
 
@@ -76,13 +92,14 @@ function render() {
     return matchesText && matchesFormat;
   });
 
-  els.summary.textContent = `${state.icons.length} иконок`;
+  els.summary.textContent = `Показано: ${filtered.length} из ${state.icons.length}`;
+  renderBrandLogo();
   els.grid.innerHTML = '';
 
   if (!filtered.length) {
     const empty = document.createElement('div');
-    empty.className = 'empty';
-    empty.textContent = state.icons.length ? 'Ничего не найдено' : 'Пока нет кастомных иконок';
+    empty.className = 'no-results';
+    empty.textContent = state.icons.length ? 'Иконки не найдены' : 'Пока нет кастомных иконок';
     els.grid.appendChild(empty);
     return;
   }
@@ -92,43 +109,120 @@ function render() {
   }
 }
 
+function renderBrandLogo() {
+  const icon = state.icons.find((item) => item.id === state.settings.logoIconId);
+  const format = state.settings.logoFormat;
+  if (icon && icon.formats[format]) {
+    els.brandLogo.src = iconUrl(icon, format);
+    els.brandLogo.hidden = false;
+  } else {
+    els.brandLogo.hidden = true;
+  }
+}
+
 function renderCard(icon) {
   const card = document.createElement('article');
-  card.className = 'card';
+  card.className = 'icon-card';
+  card.tabIndex = 0;
+  card.addEventListener('click', () => openPreview(icon));
+  card.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') openPreview(icon);
+  });
 
-  const preview = document.createElement('div');
-  preview.className = 'preview';
   const format = previewFormat(icon);
   if (format) {
     const img = document.createElement('img');
     img.src = iconUrl(icon, format);
     img.alt = icon.name;
-    preview.appendChild(img);
+    card.appendChild(img);
   }
 
-  const title = document.createElement('h3');
+  const title = document.createElement('div');
+  title.className = 'icon-name';
   title.textContent = icon.name;
 
   const footer = document.createElement('div');
   footer.className = 'card-footer';
 
   const formats = document.createElement('div');
-  formats.className = 'format-row';
+  formats.className = 'format-buttons';
   for (const item of iconFormats(icon)) {
     const pill = document.createElement('span');
-    pill.className = 'pill';
+    pill.className = 'format-pill';
     pill.textContent = item;
     formats.appendChild(pill);
   }
 
   const edit = document.createElement('button');
   edit.type = 'button';
-  edit.textContent = 'Редактировать';
-  edit.addEventListener('click', () => openEditor(icon));
+  edit.className = 'edit-button';
+  edit.textContent = '✎';
+  edit.title = 'Редактировать';
+  edit.setAttribute('aria-label', `Редактировать ${icon.name}`);
+  edit.addEventListener('click', (event) => {
+    event.stopPropagation();
+    openEditor(icon);
+  });
 
   footer.append(formats, edit);
-  card.append(preview, title, footer);
+  card.append(title, footer);
   return card;
+}
+
+function openPreview(icon) {
+  state.previewing = icon;
+  state.previewFormat = previewFormat(icon);
+  renderPreview();
+  els.previewDialog.showModal();
+}
+
+function renderPreview() {
+  const icon = state.previewing;
+  if (!icon) return;
+
+  els.previewTitle.textContent = icon.name;
+  els.previewImage.src = iconUrl(icon, state.previewFormat);
+  els.previewImage.alt = icon.name;
+  els.previewFormats.innerHTML = '';
+
+  for (const format of iconFormats(icon)) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = format.toUpperCase();
+    if (format === state.previewFormat) {
+      button.classList.add('active');
+    }
+    button.addEventListener('click', () => {
+      state.previewFormat = format;
+      renderPreview();
+    });
+    els.previewFormats.appendChild(button);
+  }
+}
+
+function closePreview() {
+  els.previewDialog.close();
+  state.previewing = null;
+  state.previewFormat = null;
+}
+
+async function setLogo() {
+  if (!state.previewing || !state.previewFormat) return;
+  try {
+    const data = await requestJson('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        logoIconId: state.previewing.id,
+        logoFormat: state.previewFormat,
+      }),
+    });
+    state.settings = data.settings;
+    render();
+    showToast('Логотип обновлен');
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 
 function openEditor(icon = null, files = []) {
@@ -136,13 +230,14 @@ function openEditor(icon = null, files = []) {
   els.dialogTitle.textContent = icon ? 'Редактировать иконку' : 'Добавить иконку';
   els.iconName.value = icon ? icon.name : (files[0] ? humanNameFromFile(files[0]) : '');
   els.iconFiles.value = '';
+  updateEditFileSummary();
   els.deleteIcon.hidden = !icon;
   els.currentFormats.innerHTML = '';
 
   if (icon) {
     for (const format of iconFormats(icon)) {
       const pill = document.createElement('span');
-      pill.className = 'pill';
+      pill.className = 'format-pill';
       pill.textContent = format;
       els.currentFormats.appendChild(pill);
     }
@@ -152,6 +247,7 @@ function openEditor(icon = null, files = []) {
 
   if (files.length) {
     setInputFiles(els.iconFiles, files);
+    updateEditFileSummary();
   }
 }
 
@@ -159,6 +255,7 @@ function closeEditor() {
   els.dialog.close();
   state.editing = null;
   els.form.reset();
+  updateEditFileSummary();
 }
 
 function setInputFiles(input, files) {
@@ -169,9 +266,24 @@ function setInputFiles(input, files) {
   input.files = transfer.files;
 }
 
+function updateEditFileSummary() {
+  const count = els.iconFiles.files.length;
+  els.editFileSummary.textContent = count ? `${count} файл(ов)` : 'Файлы не выбраны';
+}
+
 function validFiles(files) {
   const allowed = new Set(['svg', 'png', 'ico']);
   return files.filter((file) => allowed.has(file.name.split('.').pop().toLowerCase()));
+}
+
+function groupFiles(files) {
+  const groups = new Map();
+  for (const file of files) {
+    const key = baseName(file).toLowerCase();
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(file);
+  }
+  return Array.from(groups.values());
 }
 
 async function submitEditor(event) {
@@ -213,24 +325,55 @@ async function deleteCurrentIcon() {
   }
 }
 
-function handleFiles(files) {
+async function createIconFromFiles(files) {
+  const form = new FormData();
+  form.append('name', humanNameFromFile(files[0]));
+  for (const file of files) {
+    form.append('files', file);
+  }
+  await requestJson('/api/icons', { method: 'POST', body: form });
+}
+
+async function handleFiles(files) {
   const accepted = validFiles(Array.from(files));
   if (!accepted.length) {
     showToast('Поддерживаются только SVG, PNG и ICO');
     return;
   }
-  openEditor(null, accepted);
+
+  const groups = groupFiles(accepted);
+  if (groups.length === 1) {
+    openEditor(null, groups[0]);
+    return;
+  }
+
+  try {
+    for (const group of groups) {
+      await createIconFromFiles(group);
+    }
+    await loadIcons();
+    showToast(`Добавлено: ${groups.length}`);
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 
-els.addButton.addEventListener('click', () => openEditor());
 els.cancelEdit.addEventListener('click', closeEditor);
 els.closeDialog.addEventListener('click', closeEditor);
+els.closePreview.addEventListener('click', closePreview);
 els.deleteIcon.addEventListener('click', deleteCurrentIcon);
 els.form.addEventListener('submit', submitEditor);
-els.search.addEventListener('input', render);
 els.formatFilter.addEventListener('change', render);
+els.iconFiles.addEventListener('change', updateEditFileSummary);
+els.pickEditFiles.addEventListener('click', () => els.iconFiles.click());
 els.pickFiles.addEventListener('click', () => els.fileInput.click());
 els.fileInput.addEventListener('change', () => handleFiles(Array.from(els.fileInput.files)));
+els.search.addEventListener('input', render);
+els.useAsLogo.addEventListener('click', setLogo);
+
+els.previewDialog.addEventListener('click', (event) => {
+  if (event.target === els.previewDialog) closePreview();
+});
 
 for (const eventName of ['dragenter', 'dragover']) {
   els.dropzone.addEventListener(eventName, (event) => {

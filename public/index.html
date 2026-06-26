@@ -7,19 +7,18 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <h1>AHS Icons</h1>
+  <header class="hero">
+    <div class="brand">
+      <h1><img id="brand-logo" class="brand-logo" alt="" hidden>AHS Icons</h1>
       <p id="summary">Загрузка...</p>
     </div>
-    <button id="add-button" class="primary">Добавить</button>
   </header>
 
-  <main>
+  <main class="container">
     <section id="dropzone" class="dropzone">
       <div>
         <strong>Перетащите SVG, PNG или ICO сюда</strong>
-        <span>Можно загрузить несколько файлов одной иконки сразу.</span>
+        <span>Одинаковые имена объединятся в одну карточку, разные имена создадут несколько карточек.</span>
       </div>
       <button id="pick-files" type="button">Выбрать файлы</button>
       <input id="file-input" type="file" accept=".svg,.png,.ico,image/svg+xml,image/png,image/x-icon" multiple hidden>
@@ -38,11 +37,25 @@
     <section id="grid" class="grid" aria-live="polite"></section>
   </main>
 
+  <dialog id="preview-dialog">
+    <div class="preview-dialog">
+      <button class="modal-close" type="button" id="close-preview" aria-label="Закрыть">×</button>
+      <div class="modal-preview">
+        <img id="preview-image" alt="">
+        <h2 id="preview-title"></h2>
+      </div>
+      <div class="modal-actions">
+        <div id="preview-formats" class="modal-format-buttons"></div>
+        <button id="use-as-logo" type="button">Поставить перед AHS Icons</button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog id="editor">
     <form id="editor-form" method="dialog">
       <header class="dialog-header">
         <h2 id="dialog-title">Иконка</h2>
-        <button class="icon-button" value="cancel" type="button" id="close-dialog" aria-label="Закрыть">×</button>
+        <button class="modal-close inline-close" value="cancel" type="button" id="close-dialog" aria-label="Закрыть">×</button>
       </header>
 
       <label>
@@ -52,7 +65,11 @@
 
       <label>
         Файлы
-        <input id="icon-files" name="files" type="file" accept=".svg,.png,.ico,image/svg+xml,image/png,image/x-icon" multiple>
+        <span class="file-picker">
+          <button id="pick-edit-files" type="button">Выбрать файлы</button>
+          <span id="edit-file-summary">Файлы не выбраны</span>
+          <input id="icon-files" name="files" type="file" accept=".svg,.png,.ico,image/svg+xml,image/png,image/x-icon" multiple hidden>
+        </span>
       </label>
 
       <div id="current-formats" class="format-row"></div>
