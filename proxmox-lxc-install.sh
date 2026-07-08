@@ -114,6 +114,28 @@ ensure_template() {
     pveam download "$storage" "$file"
 }
 
+next_ctid() {
+    local id
+
+    if command -v pvesh >/dev/null 2>&1; then
+        id="$(pvesh get /cluster/nextid 2>/dev/null || true)"
+        if [ -n "$id" ]; then
+            printf '%s' "$id"
+            return
+        fi
+    fi
+
+    for id in $(seq 100 999999); do
+        if ! pct status "$id" >/dev/null 2>&1; then
+            printf '%s' "$id"
+            return
+        fi
+    done
+
+    echo "Could not find free container ID." >&2
+    exit 1
+}
+
 confirm() {
     local answer
     read -r -p "Create container and install $APP_NAME? [y/N]: " answer
@@ -126,7 +148,7 @@ confirm() {
 require_root
 require_pve
 
-NEXT_ID="$(pct nextid)"
+NEXT_ID="$(next_ctid)"
 TEMPLATE_STORAGE="$(ask "Template storage" "$DEFAULT_TEMPLATE_STORAGE")"
 DETECTED_TEMPLATE="$(detect_template "$TEMPLATE_STORAGE")"
 if [ -z "$DETECTED_TEMPLATE" ]; then
