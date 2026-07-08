@@ -1,16 +1,17 @@
 # AHS Icons
 
-Локальная галерея кастомных AHS-иконок без внешних зависимостей.
+Локальная галерея кастомных AHS-иконок.
 
 Поддерживает SVG, PNG и ICO, drag&drop-загрузку, редактирование карточек, выбор логотипа и прямые ссылки на файлы.
 
-## Docker
+## Docker Compose
 
 Быстрый запуск:
 
 ```bash
 cp .env.example .env
-docker compose up -d --build
+nano .env
+docker compose up -d
 ```
 
 Открыть:
@@ -19,14 +20,17 @@ docker compose up -d --build
 http://SERVER_IP:4051/
 ```
 
-В `.env` можно указать путь хранения данных:
+Пример `.env` для NFS:
 
 ```dotenv
+AHS_ICONS_IMAGE=akininav/icons:latest
 AHS_ICONS_PORT=4051
 AHS_ICONS_DATA_PATH=/mnt/nfs/ahs-icons
 ```
 
-В эту папку будут записываться:
+Контейнер пишет данные в `/data`, а на хосте эта папка монтируется из `AHS_ICONS_DATA_PATH`.
+
+Внутри будут храниться:
 
 ```text
 icons.json
@@ -34,14 +38,19 @@ settings.json
 icons/<icon-id>/
 ```
 
-Если папка находится на NFS, сначала примонтируйте ее на хосте, затем укажите mount point в `AHS_ICONS_DATA_PATH`.
+## Docker Hub
 
-## Сборка Образа
+Образ публикуется в Docker Hub:
 
-Локально:
+```text
+akininav/icons:latest
+akininav/icons:sha-<commit-sha>
+```
+
+Локальная сборка:
 
 ```bash
-docker build -t ahs-icons:latest .
+docker build -t akininav/icons:latest .
 ```
 
 Запуск без compose:
@@ -53,34 +62,25 @@ docker run -d \
   -p 4051:4051 \
   -e AHS_ICONS_DATA=/data \
   -v /mnt/nfs/ahs-icons:/data \
-  ahs-icons:latest
+  akininav/icons:latest
 ```
 
-## GitLab CI
+## GitHub Actions
 
-В репозитории есть `.gitlab-ci.yml`. При push в `main` GitLab Runner собирает Docker image и публикует его в GitLab Container Registry:
+Workflow находится в `.github/workflows/docker.yml`.
+
+Чтобы GitHub сам собирал и публиковал контейнер в Docker Hub, добавьте в GitHub репозиторий:
+
+`Settings -> Secrets and variables -> Actions -> New repository secret`
+
+Нужны secrets:
 
 ```text
-$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
-$CI_REGISTRY_IMAGE:latest
+DOCKERHUB_USERNAME=akininav
+DOCKERHUB_TOKEN=<Docker Hub access token>
 ```
 
-После первой сборки можно указать готовый образ в `.env`:
-
-```dotenv
-AHS_ICONS_IMAGE=registry.git.akinin.su/akininav/ahs-icons:latest
-AHS_ICONS_PORT=4051
-AHS_ICONS_DATA_PATH=/mnt/nfs/ahs-icons
-```
-
-Если адрес registry отличается, возьмите точное имя образа в GitLab: `Packages & Registries -> Container Registry`.
-
-Обновление контейнера из registry:
-
-```bash
-docker compose pull
-docker compose up -d
-```
+После push в `main` workflow соберет Docker image и отправит его в `akininav/icons`.
 
 ## Установка Без Docker
 
@@ -91,13 +91,7 @@ export GITLAB_TOKEN='PASTE_GITLAB_TOKEN_HERE'
 curl -fsSL -H "PRIVATE-TOKEN: $GITLAB_TOKEN" https://git.akinin.su/akininav/ahs-icons/-/raw/main/install.sh | sudo -E bash
 ```
 
-Параметры:
-
-```bash
-export APP_DIR=/home/akininav/ahs-icons
-export PORT=4051
-export HOST=0.0.0.0
-```
+Этот способ оставлен для старой установки. Для нового развертывания лучше использовать Docker Compose.
 
 ## Ручной Запуск
 
