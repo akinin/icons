@@ -44,6 +44,26 @@ settings.json
 icons/<icon-id>/
 ```
 
+## Установка в Proxmox LXC
+
+На Proxmox-хосте можно запустить мастер создания LXC-контейнера:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/akinin/icons/main/proxmox-lxc-install.sh)"
+```
+
+Скрипт спросит:
+
+- CTID или возьмет следующий свободный автоматически;
+- шаблон Debian, storage, CPU, RAM, swap и размер диска;
+- IP контейнера: `dhcp` или статический адрес с gateway;
+- NFS-путь, например `10.10.100.11:/volume1/icons`;
+- локальный путь монтирования NFS на Proxmox, например `/mnt/icons`;
+- путь внутри LXC, например `/mnt/icons`;
+- порт веб-интерфейса.
+
+После этого он создаст unprivileged LXC с `nesting=1,keyctl=1`, добавит mount point, установит Docker внутри контейнера и запустит AHS Icons.
+
 ## Где лежит установка
 
 По умолчанию скрипт создает:
