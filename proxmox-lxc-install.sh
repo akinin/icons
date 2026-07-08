@@ -83,10 +83,22 @@ ensure_nfs_mount() {
     local mountpoint="$2"
 
     ensure_package nfs-common mount.nfs
-    install -d -m 755 "$mountpoint"
+    if [ -e "$mountpoint" ] && [ ! -d "$mountpoint" ]; then
+        echo "$mountpoint exists, but it is not a directory."
+        exit 1
+    fi
+
+    if [ ! -d "$mountpoint" ]; then
+        mkdir -p "$mountpoint"
+    fi
 
     if ! grep -qsE "^[^#][[:space:]]*$remote[[:space:]]+$mountpoint[[:space:]]+nfs" /etc/fstab; then
         printf '%s  %s  nfs4  defaults,_netdev  0  0\n' "$remote" "$mountpoint" >> /etc/fstab
+    fi
+
+    if findmnt "$mountpoint" >/dev/null; then
+        echo "$mountpoint is already mounted."
+        return
     fi
 
     mount "$mountpoint" || mount -t nfs4 "$remote" "$mountpoint"
@@ -149,14 +161,17 @@ require_root
 require_pve
 
 NEXT_ID="$(next_ctid)"
+
+echo
+echo "$APP_NAME Proxmox LXC installer"
+echo
+
 TEMPLATE_STORAGE="$(ask "Template storage" "$DEFAULT_TEMPLATE_STORAGE")"
 DETECTED_TEMPLATE="$(detect_template "$TEMPLATE_STORAGE")"
 if [ -z "$DETECTED_TEMPLATE" ]; then
     DETECTED_TEMPLATE="$TEMPLATE_STORAGE:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
 fi
 
-echo
-echo "$APP_NAME Proxmox LXC installer"
 echo
 
 CTID="$(ask "Container ID" "$NEXT_ID")"
