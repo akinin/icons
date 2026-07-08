@@ -229,40 +229,12 @@ async function copyIconLink(icon, format) {
   const url = new URL(iconUrl(icon, format), window.location.href);
   url.search = '';
   try {
-    const copied = copyTextLegacy(url.href);
-    if (!copied && navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(url.href);
-    } else if (!copied) {
-      throw new Error('copy failed');
-    }
+    await navigator.clipboard.writeText(url.href);
     showToast('Скопировано');
-  } catch {
+  } catch (error) {
+    console.error(error);
     showToast('Не удалось скопировать');
   }
-}
-
-function copyTextLegacy(text) {
-  const active = document.activeElement;
-  const input = document.createElement('input');
-  input.value = text;
-  input.setAttribute('readonly', '');
-  input.style.position = 'fixed';
-  input.style.top = '0';
-  input.style.left = '0';
-  input.style.width = '1px';
-  input.style.height = '1px';
-  input.style.opacity = '0';
-  input.style.zIndex = '10000';
-  document.body.appendChild(input);
-  input.focus({ preventScroll: true });
-  input.select();
-  input.setSelectionRange(0, text.length);
-  const copied = document.execCommand('copy');
-  input.remove();
-  if (active && typeof active.focus === 'function') {
-    active.focus({ preventScroll: true });
-  }
-  return copied;
 }
 
 async function uploadLogo(file) {
