@@ -16,7 +16,6 @@
         </button>
         AHS Icons
       </h1>
-      <p id="summary">Загрузка...</p>
       <input id="logo-file-input" type="file" accept=".svg,.png,.ico,image/svg+xml,image/png,image/x-icon" hidden>
     </div>
   </header>
@@ -24,7 +23,7 @@
   <main class="container">
     <section id="dropzone" class="dropzone">
       <div>
-        <strong>Перетащите SVG, PNG или ICO сюда</strong>
+        <strong>Перетащите сюда SVG, PNG или ICO</strong>
         <span>Одинаковые имена объединятся в одну карточку, разные имена создадут несколько карточек.</span>
       </div>
       <button id="pick-files" type="button">Выбрать файлы</button>
@@ -40,6 +39,8 @@
         <option value="ico">ICO</option>
       </select>
     </section>
+
+    <p id="summary" class="stats">Загрузка...</p>
 
     <section id="grid" class="grid" aria-live="polite"></section>
   </main>

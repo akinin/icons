@@ -193,9 +193,6 @@ function renderPreview() {
     const button = document.createElement('button');
     button.type = 'button';
     button.textContent = format.toUpperCase();
-    if (format === state.previewFormat) {
-      button.classList.add('active');
-    }
     button.addEventListener('click', () => {
       copyIconLink(icon, format);
     });
@@ -239,10 +236,14 @@ async function copyIconLink(icon, format) {
       textarea.value = url.href;
       textarea.style.position = 'fixed';
       textarea.style.left = '-9999px';
+      textarea.setAttribute('readonly', '');
       document.body.appendChild(textarea);
+      textarea.focus();
       textarea.select();
-      document.execCommand('copy');
+      textarea.setSelectionRange(0, textarea.value.length);
+      const copied = document.execCommand('copy');
       textarea.remove();
+      if (!copied) throw new Error('copy failed');
     }
     showToast('Скопировано');
   } catch {
