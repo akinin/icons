@@ -19,6 +19,7 @@ const els = {
   dropzone: document.querySelector('#dropzone'),
   editFileSummary: document.querySelector('#edit-file-summary'),
   fileInput: document.querySelector('#file-input'),
+  favicon: document.querySelector('#favicon'),
   formatFilter: document.querySelector('#format-filter'),
   form: document.querySelector('#editor-form'),
   grid: document.querySelector('#grid'),
@@ -114,13 +115,29 @@ function renderBrandLogo() {
   const icon = state.icons.find((item) => item.id === state.settings.logoIconId);
   const format = state.settings.logoFormat;
   if (icon && icon.formats[format]) {
-    els.brandLogo.src = iconUrl(icon, format);
+    const url = iconUrl(icon, format);
+    els.brandLogo.src = url;
     els.brandLogo.hidden = false;
     document.querySelector('#brand-logo-empty').hidden = true;
+    updateFavicon(url, format);
   } else {
     els.brandLogo.hidden = true;
     document.querySelector('#brand-logo-empty').hidden = false;
+    updateFavicon(null);
   }
+}
+
+function updateFavicon(url, format = '') {
+  if (!els.favicon || !url) return;
+
+  const typeByFormat = {
+    svg: 'image/svg+xml',
+    png: 'image/png',
+    ico: 'image/x-icon',
+  };
+
+  els.favicon.href = url;
+  els.favicon.type = typeByFormat[format] || '';
 }
 
 function renderCard(icon) {
