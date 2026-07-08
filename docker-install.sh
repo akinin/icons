@@ -68,10 +68,23 @@ compose() {
     exit 1
 }
 
+ensure_dir() {
+    local path="$1"
+
+    if [ -e "$path" ] && [ ! -d "$path" ]; then
+        echo "$path exists, but it is not a directory."
+        exit 1
+    fi
+
+    if [ ! -d "$path" ]; then
+        mkdir -p "$path"
+    fi
+}
+
 install_docker
 
-install -d -m 755 "$APP_DIR"
-install -d -m 755 "$DATA_PATH"
+ensure_dir "$APP_DIR"
+ensure_dir "$DATA_PATH"
 
 cat >"$APP_DIR/.env" <<EOF
 AHS_ICONS_IMAGE=$IMAGE
