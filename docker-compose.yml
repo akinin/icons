@@ -1,0 +1,16 @@
+services:
+  ahs-icons:
+    image: ${AHS_ICONS_IMAGE:-ahs-icons:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ahs-icons
+    restart: unless-stopped
+    ports:
+      - "${AHS_ICONS_PORT:-4051}:4051"
+    environment:
+      AHS_ICONS_HOST: 0.0.0.0
+      AHS_ICONS_PORT: 4051
+      AHS_ICONS_DATA: /data
+    volumes:
+      - "${AHS_ICONS_DATA_PATH:-./data}:/data"
