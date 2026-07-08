@@ -120,15 +120,6 @@ AHS_ICONS_PORT=4051
 AHS_ICONS_DATA_PATH=/mnt/nfs/ahs-icons
 ```
 
-## Docker Hub
-
-Готовый образ публикуется в Docker Hub:
-
-```text
-akininav/icons:latest
-akininav/icons:sha-<commit-sha>
-```
-
 Локальная сборка:
 
 ```bash
@@ -146,23 +137,6 @@ docker run -d \
   -v /mnt/nfs/ahs-icons:/data \
   akininav/icons:latest
 ```
-
-## GitHub Actions
-
-Workflow находится в `.github/workflows/docker.yml`.
-
-Чтобы GitHub сам собирал и публиковал контейнер в Docker Hub, добавьте в GitHub репозиторий:
-
-`Settings -> Secrets and variables -> Actions -> New repository secret`
-
-Нужны secrets:
-
-```text
-DOCKERHUB_USERNAME=akininav
-DOCKERHUB_TOKEN=<Docker Hub access token>
-```
-
-После push в `main` workflow соберет Docker image и отправит его в `akininav/icons`.
 
 ## Ручной запуск без Docker
 
