@@ -229,26 +229,40 @@ async function copyIconLink(icon, format) {
   const url = new URL(iconUrl(icon, format), window.location.href);
   url.search = '';
   try {
-    if (navigator.clipboard && window.isSecureContext) {
+    const copied = copyTextLegacy(url.href);
+    if (!copied && navigator.clipboard && window.isSecureContext) {
       await navigator.clipboard.writeText(url.href);
-    } else {
-      const textarea = document.createElement('textarea');
-      textarea.value = url.href;
-      textarea.style.position = 'fixed';
-      textarea.style.left = '-9999px';
-      textarea.setAttribute('readonly', '');
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
-      textarea.setSelectionRange(0, textarea.value.length);
-      const copied = document.execCommand('copy');
-      textarea.remove();
-      if (!copied) throw new Error('copy failed');
+    } else if (!copied) {
+      throw new Error('copy failed');
     }
     showToast('Скопировано');
   } catch {
     showToast('Не удалось скопировать');
   }
+}
+
+function copyTextLegacy(text) {
+  const active = document.activeElement;
+  const input = document.createElement('input');
+  input.value = text;
+  input.setAttribute('readonly', '');
+  input.style.position = 'fixed';
+  input.style.top = '0';
+  input.style.left = '0';
+  input.style.width = '1px';
+  input.style.height = '1px';
+  input.style.opacity = '0';
+  input.style.zIndex = '10000';
+  document.body.appendChild(input);
+  input.focus({ preventScroll: true });
+  input.select();
+  input.setSelectionRange(0, text.length);
+  const copied = document.execCommand('copy');
+  input.remove();
+  if (active && typeof active.focus === 'function') {
+    active.focus({ preventScroll: true });
+  }
+  return copied;
 }
 
 async function uploadLogo(file) {
