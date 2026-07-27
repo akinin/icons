@@ -3,7 +3,7 @@ name: Mirror to GitLab
 on:
   push:
     branches:
-      - "**"
+      - main
     tags:
       - "**"
   workflow_dispatch:
@@ -20,6 +20,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check out source revision
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Check mirror credentials
         env:
           GITLAB_MIRROR_USERNAME: ${{ secrets.GITLAB_MIRROR_USERNAME }}
@@ -30,22 +35,32 @@ jobs:
             exit 1
           fi
 
-      - name: Clone GitHub repository
+      - name: Prepare GitLab-specific tree
         run: |
-          git clone --mirror \
-            "https://github.com/${GITHUB_REPOSITORY}.git" \
-            repository.git
+          bash .github/scripts/prepare-gitlab-mirror.sh
 
-      - name: Mirror branches and tags
+      - name: Create generated GitLab commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          git commit -m "Adapt ${GITHUB_SHA::8} for GitLab mirror"
+
+      - name: Push generated revision to GitLab
         env:
           GITLAB_MIRROR_USERNAME: ${{ secrets.GITLAB_MIRROR_USERNAME }}
           GITLAB_MIRROR_TOKEN: ${{ secrets.GITLAB_MIRROR_TOKEN }}
         run: |
           auth="$(printf '%s:%s' "${GITLAB_MIRROR_USERNAME}" "${GITLAB_MIRROR_TOKEN}" | base64 | tr -d '\n')"
 
-          git -C repository.git \
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            target_ref="refs/tags/${GITHUB_REF_NAME}"
+          else
+            target_ref="refs/heads/main"
+          fi
+
+          git \
             -c "http.extraHeader=Authorization: Basic ${auth}" \
-            push --force --prune \
+            push --force \
             "https://git.akinin.su/akininav/ahs-icons.git" \
-            "refs/heads/*:refs/heads/*" \
-            "refs/tags/*:refs/tags/*"
+            "HEAD:${target_ref}"
