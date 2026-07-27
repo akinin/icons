@@ -1,0 +1,51 @@
+name: Mirror to GitLab
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gitlab-mirror
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check mirror credentials
+        env:
+          GITLAB_MIRROR_USERNAME: ${{ secrets.GITLAB_MIRROR_USERNAME }}
+          GITLAB_MIRROR_TOKEN: ${{ secrets.GITLAB_MIRROR_TOKEN }}
+        run: |
+          if [ -z "${GITLAB_MIRROR_USERNAME}" ] || [ -z "${GITLAB_MIRROR_TOKEN}" ]; then
+            echo "Repository secrets GITLAB_MIRROR_USERNAME and GITLAB_MIRROR_TOKEN are required."
+            exit 1
+          fi
+
+      - name: Clone GitHub repository
+        run: |
+          git clone --mirror \
+            "https://github.com/${GITHUB_REPOSITORY}.git" \
+            repository.git
+
+      - name: Mirror branches and tags
+        env:
+          GITLAB_MIRROR_USERNAME: ${{ secrets.GITLAB_MIRROR_USERNAME }}
+          GITLAB_MIRROR_TOKEN: ${{ secrets.GITLAB_MIRROR_TOKEN }}
+        run: |
+          auth="$(printf '%s:%s' "${GITLAB_MIRROR_USERNAME}" "${GITLAB_MIRROR_TOKEN}" | base64 | tr -d '\n')"
+
+          git -C repository.git \
+            -c "http.extraHeader=Authorization: Basic ${auth}" \
+            push --force --prune \
+            "https://git.akinin.su/akininav/ahs-icons.git" \
+            "refs/heads/*:refs/heads/*" \
+            "refs/tags/*:refs/tags/*"
