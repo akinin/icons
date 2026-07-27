@@ -1,49 +1,28 @@
 stages:
-  - deploy
+  - build
 
-variables:
-  AHS_ICONS_CONTAINER: "ahs-icons"
-  AHS_ICONS_IMAGE: "ahs-icons"
-  AHS_ICONS_PORT: "4051"
-  AHS_ICONS_DATA_PATH: "/opt/ahs-icons/data"
-
-build_and_deploy:
-  stage: deploy
+build_container:
+  stage: build
+  image: docker:26-cli
   tags:
-    - ahs-icons
-  resource_group: ahs-icons-production
-  environment:
-    name: production
-    url: http://192.168.0.60:4051
+    - docker
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_TAG'
+  before_script:
+    - echo "${CI_REGISTRY_PASSWORD}" | docker login --username "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
   script:
+    - docker build --pull --tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}" .
+    - docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}"
     - |
-      set -eu
-
-      docker info
-
-      if [ ! -d "${AHS_ICONS_DATA_PATH}" ]; then
-        echo "Create ${AHS_ICONS_DATA_PATH} on the runner host before the first deployment."
-        exit 1
+      if [ "${CI_COMMIT_BRANCH:-}" = "${CI_DEFAULT_BRANCH}" ]; then
+        docker tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}" "${CI_REGISTRY_IMAGE}:latest"
+        docker push "${CI_REGISTRY_IMAGE}:latest"
       fi
-
-      docker build --pull \
-        --tag "${AHS_ICONS_IMAGE}:${CI_COMMIT_SHA}" \
-        --tag "${AHS_ICONS_IMAGE}:latest" \
-        .
-
-      docker rm --force "${AHS_ICONS_CONTAINER}" 2>/dev/null || true
-
-      docker run --detach \
-        --name "${AHS_ICONS_CONTAINER}" \
-        --restart unless-stopped \
-        --publish "${AHS_ICONS_PORT}:4051" \
-        --env AHS_ICONS_HOST=0.0.0.0 \
-        --env AHS_ICONS_PORT=4051 \
-        --env AHS_ICONS_DATA=/data \
-        --volume "${AHS_ICONS_DATA_PATH}:/data" \
-        "${AHS_ICONS_IMAGE}:${CI_COMMIT_SHA}"
-
-      test "$(docker inspect --format '{{.State.Running}}' "${AHS_ICONS_CONTAINER}")" = "true"
-      docker image prune --force
+    - |
+      if [ -n "${CI_COMMIT_TAG:-}" ]; then
+        docker tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}" "${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}"
+        docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}"
+      fi
+  after_script:
+    - docker logout "${CI_REGISTRY}" || true
